@@ -1,0 +1,97 @@
+Step 1: Open 2 CSR1000v routers
+	Router 1:
+		Name: nFlowR1
+		User: admin
+		Pass: pass
+	Router 2:
+		Name: nFlowR2
+		User: admin
+		Pass: pass
+	
+	Network Adapters For both routers
+		NetAdapt : NAT
+		NetAdapt1: VMNet2
+		NetAdapt2: VMNet3		
+
+Step 2: Configure IP address, default route, and initial config
+	@nFlowR1
+	conf t
+	no logging console
+	no ip domain lookup
+	 line cons 0
+	  exec-timeout 0 0
+	int gi 1
+	 ip add 192.168.108.5 255.255.255.0
+	 no shut
+	 exit
+	int gi 2
+	 ip add 192.168.102.5 255.255.255.0
+	 no shut
+	 exit
+	int gi 3
+	 ip add 192.168.102.5 255.255.255.0
+	 no shut
+	 exit
+	ip route 0.0.0.0 0.0.0.0 192.168.108.2
+	
+	@nFlowR2
+	conf t
+	no logging console
+	no ip domain lookup
+	 line cons 0
+	  exec-timeout 0 0
+	int gi 1
+	 ip add 192.168.108.6 255.255.255.0
+	 no shut
+	 exit
+	int gi 2
+	 ip add 192.168.102.6 255.255.255.0
+	 no shut
+	 exit
+	int gi 3
+	 ip add 192.168.102.6 255.255.255.0
+	 no shut
+	 exit
+	ip route 0.0.0.0 0.0.0.0 192.168.108.2
+
+Step 3: Configure HSRP and SLA
+@nFlowR1
+conf t
+track 2 int gi 1 line-protocol
+int gi 2
+standby version 2
+standby 2 ip 192.168.102.7
+standby 2 preempt
+standby 2 Priority 150
+standby 2 track 2 decrement 60
+END
+
+@nFlowR2
+conf t
+int gi 2
+standby version 2
+standby 2 ip 192.168.102.7
+standby 2 preempt
+standby 2 Priority 100
+END
+
+--SLA
+
+@app1
+conf t
+no ip sla 4
+ip sla 4
+ icmp-echo 8.8.8.8
+ freq 15
+ exit
+ip sla schedule 4 life forever start-time now
+track 4 ip sla 4
+ delay down 10 up 5
+ exit
+int gi 2
+no standby 2 track 2 decrement 60
+standby 2 track 4 decrement 60
+
+**clone then telnet app1
+	terminal monitor
+	terminal no monitor
