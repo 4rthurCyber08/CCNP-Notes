@@ -1,0 +1,177 @@
+isp4: 2016
+isp2: 2014
+r1: 2012
+r2: 2011
+isp1: 2015
+
+
+@I4(RST)/R20
+
+conf t
+hostname ISP4-r20
+int lo 0
+ no ip add
+int e0/1
+ no ip add
+int e0/3
+ no ip add
+int e0/2
+ip add 10.2.203.4 255.255.255.0
+no shut
+end
+
+@I2(RST)/R3
+
+conf t
+hostname ISP2-r3
+int e0/2
+ip add 10.2.203.3 255.255.255.0
+no shut
+int e1/3
+ip add 10.0.23.3 255.255.255.0
+no shut
+end 
+
+@R1(RST)/R2
+
+conf t
+hostname R1-r2
+int e1/1
+ip add 10.0.23.2 255.255.255.0
+no shut
+int e1/0
+ip add 10.1.102.2 255.255.255.0
+no shut
+interface loopback0
+ ip address 10.0.1.1 255.255.255.0
+
+@R2(RST)/R10
+
+conf t
+hostname R2-r10
+int e1/2
+ip add 10.1.102.1 255.255.255.0
+no shut
+
+
+
+@I1(RST)/R1
+
+conf t
+hostname ISP1-r1
+int e1/1
+ip add 10.0.3.1 255.255.255.0
+no shut
+int e1/3
+ip add 10.0.2.1 255.255.255.0
+no shut
+end
+
+******************************************************
+
+@R1(RST)/R30
+
+! R30 Initial Configuration
+conf t
+interface loopback0
+ ip address 10.30.30.30 255.255.255.255
+interface ethernet0/0
+ ip address 10.0.30.3 255.255.255.0
+interface ethernet0/1
+ ip address 10.50.40.3 255.255.255.0
+
+
+
+
+OSPFLAB1:
+r20:
+CONFIG T
+int lo 0
+ip add 10.20.20.20 255.255.255.255
+end
+
+r3:
+CONFIG T
+int lo 0
+ip add 10.3.3.3 255.255.255.255
+end
+
+r1:
+CONFIG T
+int lo 0
+ip add 10.1.1.1 255.255.255.255
+end
+
+r2:
+CONFIG T
+int lo 0
+ip add 10.2.2.2 255.255.255.255
+end
+
+r10:
+CONFIG T
+int lo 0
+ip add 10.10.10.10 255.255.255.255
+end
+
+CONFIGURE MULTI AREA OSPF ON R20:
+config t
+no router ospf 1
+router ospf 1
+router-id 10.20.20.20
+network 10.2.203.0 0.0.0.255 area 20
+network 10.20.20.20 0.0.0.0 area 20
+
+R3:
+config t
+no router ospf 1
+router ospf 1
+router-id 10.3.3.3
+network 10.2.203.0 0.0.0.255 area 20
+network 10.3.3.3 0.0.0.0 area 0
+network 10.0.23.0 0.0.0.255 area 0
+network 10.0.3.0 0.0.0.255 area 0
+
+r1:
+config t
+router ospf 1
+router-id 10.1.1.1
+int lo 0
+ ip ospf 1 area 0
+int e1/1
+ ip ospf 1 area 0
+int e1/3
+ ip ospf 1 area 0
+ 
+
+r2:
+config t
+router ospf 1
+router-id 10.2.2.2
+int lo 0
+ ip ospf 1 area 0
+int e1/1
+ ip ospf 1 area 0
+int e1/2
+ ip ospf 1 area 0
+int e1/0
+ ip ospf 1 area 10
+ 
+r10 
+config t
+no router ospf 1
+router ospf 1
+router-id 10.10.10.10
+network 10.1.102.0 0.0.0.255 area 10
+network 10.10.10.10 0.0.0.0 area 10
+end
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,242 @@
+
+@D1/r10
+config t
+ip cef
+hostname R10-D1
+!
+vrf definition CORP
+description Enable ipv4 for VRF CORP with below commands:
+address-family ipv4
+exit-address-family
+!
+interface e1/0
+no shut
+interface e1/0.100
+encapsulation dot1Q 100
+vrf forwarding CORP
+ip address 10.100.1.1 255.255.255.0
+!
+interface e1/1
+ip address 10.10.1.1 255.255.255.0
+ip ospf 100 area 0.0.0.0
+no shut
+!
+router ospf 100
+router-id 10.10.10.10
+!
+crypto isakmp policy 10
+encr aes
+hash md5
+authentication pre-share
+group 2
+crypto isakmp key cisco address 10.10.2.1
+!
+crypto ipsec transform-set MYSET esp-aes esp-md5-hmac
+mode tunnel
+!
+crypto ipsec profile MyProfile
+set transform-set MYSET
+!
+interface tunnel0
+vrf forwarding CORP
+ip address 10.100.100.1 255.255.255.0
+tunnel source Ethernet1/1
+no shut
+end
+
+
+@ISP/r4:
+config t
+hostname R3-ISP
+interface e1/0
+ip address 10.10.1.2 255.255.255.0
+ip ospf 100 area 0.0.0.0
+no shut
+interface e1/1
+ip address 10.10.2.2 255.255.255.0
+ip ospf 100 area 0.0.0.0
+no shut
+!
+router ospf 100
+router-id 1.1.1.1
+end
+
+
+@R20/D2:
+config t
+ip cef
+hostname R20-D2
+!
+vrf definition CORP
+description Enable ipv4 for VRF CORP with below commands:
+address-family ipv4
+exit-address-family
+!
+interface e1/0
+no shut
+interface e1/0.101
+encapsulation dot1Q 101
+vrf forwarding CORP
+ip address 10.101.2.1 255.255.255.0
+!
+interface e1/1
+ip address 10.10.2.1 255.255.255.0
+ip ospf 100 area 0.0.0.0
+no shut
+!
+router ospf 100
+router-id 20.20.20.20
+!
+crypto isakmp policy 10
+encr aes
+hash md5
+authentication pre-share
+group 2
+crypto isakmp key cisco address 10.10.1.1
+!
+crypto ipsec transform-set MYSET esp-aes esp-md5-hmac
+mode tunnel
+!
+crypto ipsec profile MyProfile
+set transform-set MYSET
+!
+interface tunnel0
+vrf forwarding CORP
+ip address 10.100.100.2 255.255.255.0
+tunnel source Ethernet1/1
+no shut
+
+
+#################
+@SW10
+config t
+hostname Sw10-r1
+!vlan 100
+exit
+!
+interface e1/0
+switchport trunk encapsulation dot1q
+switchport mode trunk
+no shut
+!
+int lo 100
+!interface e1/1
+!switchport
+!switchport mode access
+!switchport access vlan 100
+!no shut
+
+##################
+@SW20/S1:
+config t
+hostname Sw20-d1
+vlan 101
+exit
+!
+interface e1/0
+switchport
+switchport trunk encapsulation dot1q
+switchport mode trunk
+no shut
+!
+interface lo 101
+!interface e0/1
+!switchport
+!switchport mode access
+!switchport access vlan 101
+!no shut
+
+
+
+
+EXAMLAB:
+The operations team started configuring network devices for a new site. 
+R10 and R20 are preconfigured with the CORP VRF
+R10 has network connectivity to R20. Complete the configurations to 
+achieve these goals:
+1. Extend the CORP VRF between R10 and R20 using Tunnel0.
+(Optional) 2. Protect Tunnel0 using the preconfigured profile.
+3. Configure static routing on R10 and R20 so that users in 
+VLAN 100 and VLAN 101 that belong to the CORP VRF are able to
+communicate with each other. Tunnel0 should be the only interface 
+used to route traffic for the CORP VRF.
+
+
+@r10:
+CONFIG T
+no int tunnel 0
+interface Tunnel 0
+ !//use "source" command below if the initial config did not have
+ tunnel source Ethernet1/1 
+ tunnel destination 10.10.2.1
+ !//use below command if the IP address or VRF CORP is missing
+ vrf forwarding CORP
+ ip address 10.100.100.1 255.255.255.0
+ end
+ 
+ 
+ 
+@r20/R2:
+config t
+interface Tunnel 0
+ tunnel source Ethernet1/1
+ tunnel destination 10.10.1.1
+ vrf forwarding CORP
+ ip address 10.100.100.2 255.255.255.0
+ end
+
+ 
+TEST/VERIFICATION:
+R10-R4#ping vrf CORP 10.100.100.2
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.100.100.2, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/1/1 ms
+R10-R4#
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$
+$$$$$$$$$$$$$$$$$$$$$$$$$$
+(Optional) Task 2. Protect Tunnel0 using the preconfigured profile.
+
+@
+R10/R4
+config t
+interface Tunnel 0
+ tunnel protection ipsec profile MyProfile
+ 
+ 
+#R20/r2:
+config t
+interface Tunnel 0
+ tunnel protection ipsec profile MyProfile
+ 
+R10-R4#sh crypto isakmp sa
+IPv4 Crypto ISAKMP SA
+dst             src             state          conn-id status
+10.10.1.1       10.10.2.1       QM_IDLE           1001 ACTIVE
+10.10.2.1       10.10.1.1       QM_IDLE           1002 ACTIVE
+
+
+Task 3. Configure static routing on R10 and R20 so that users in VLAN 100 and VLAN 101 that belong to the
+CORP VRF are able to communicate with each other. Tunnel0 should be the only interface used to route
+traffic for the CORP VRF.
+
+
+On R10:/D1:
+config t
+ip route vrf CORP 10.101.2.0 255.255.255.0 Tunnel0
+
+On R20:/D2:
+config t
+ip route vrf CORP 10.100.1.0 255.255.255.0 Tunnel0
+
+VERIFY:
+R10/D1:
+ping vrf CORP 10.101.2.1 source e1/0.100
+
+
+On R20/d2:
+R20#
+ping vrf CORP 10.100.1.1 source e1/2.101
+!!!!!
+
