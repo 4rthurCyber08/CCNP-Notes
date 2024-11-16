@@ -1,0 +1,125 @@
+CCNP DAY 2
+
+1. SD-WAN
+Set VMNET 10 IP 100.0.0.0 255.255.255.0
+-Activate DHCP for VMNET 10 -Virtual Net Editor
+
+Net Adapter: VMNET 10
+Net Adapter 2: NAT
+
+Open the IP on a browser
+User: admin
+Pass: eve
+
+2. Configure Cloud
+@cloud
+conf t
+ hostname cloud
+ int lo 0
+  ip add 8.8.8.8 255.255.255.255
+  no shut
+ exit
+ int vlan 1
+  no shut
+  ip add 100.0.0.254 255.255.255.0
+  exit
+ router bgp 65001
+  no synchro
+  bgp log-neighbor-changes
+  network 8.8.8.8 mask 255.255.255.255
+  net 100.0.0.0 mask 255.255.255.0
+  neighbor 100.0.0.107 remote-as 65001
+  neighbor 100.0.0.109 remote-as 65001
+  neighbor 100.0.0.111 remote-as 65001
+  no auto-summary
+  exit
+ do wr
+ 
+3. Run vtmgmt -> vBond -> vSmart. 
+	Wait to boot to not oberload cpu process
+	
+4. Then, Run vEdge1, vEdge2, vEdge3
+
+@SITE1
+conf t
+ hostname site1
+ no ip domain-lookup
+ int fa0/0
+  no shut
+  ip add 172.16.10.2 255.255.255.0
+  exit
+ int lo0
+  no shut
+  ip add 1.1.1.1 255.255.255.255
+ exit
+ do wr
+
+conf t
+router ospf 1
+net 172.16.10.0 0.0.0.255 area 0
+ney 1.1.1.1 0.0.0.0 area 0
+end
+wr
+
+@SITE2
+conf t
+ hostname site2
+ no ip domain-lookup
+ int fa0/0
+  no shut
+  ip add 172.16.20.2 255.255.255.0
+  exit
+ int lo0
+  no shut
+  ip add 2.2.2.2 255.255.255.255
+ exit
+ do wr
+
+conf t
+router ospf 1
+net 172.16.20.0 0.0.0.255 area 0
+ney 1.1.1.1 0.0.0.0 area 0
+end
+wr
+
+@SITE3
+conf t
+ hostname site3
+ no ip domain-lookup
+ int fa0/0
+  no shut
+  ip add 172.16.30.2 255.255.255.0
+  exit
+ int lo0
+  no shut
+  ip add 3.3.3.3 255.255.255.255
+ exit
+ do wr
+
+conf t
+router ospf 1
+net 172.16.30.0 0.0.0.255 area 0
+ney 1.1.1.1 0.0.0.0 area 0
+end
+wr 
+
+ 
+5. Open 100.0.0.101 on a new browser
+User: admin
+Pass: admin
+
+6. Configurations -> Templates -> Feature -> vEDGE Cloud -> VPN
+	Template Name
+
+7. Configurations -> Templates -> Feature -> vEDGE Cloud -> VPN Interface Ethernet
+
+8. Configurations -> Templates -> Feature -> vEDGE Cloud -> VPN
+
+9. Configurations -> Templates -> Feature -> vEDGE Cloud -> VPN Interface Ethernet
+
+Create template from feature
+Device: vEdge Cloud
+Temp Name: BR-VE-TEMP
+
+
+
