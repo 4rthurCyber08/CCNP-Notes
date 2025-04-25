@@ -1,5 +1,5 @@
-Lab Name: MultiSite VPN
-Description: DMVPN NHRP mGRE IPSec FHRP Enterprise Lab
+Lab Name: MultiSite
+Description: AToM L2&L3VPN, DMVPN Lab
 Time: 0
 
 
@@ -49,12 +49,10 @@ Time: 0
 148:1/0 149:0/1
 
 149:0/0 152:0/2
-
 140:0/0 138:0/2
 
-
 ---------------| Image 
-Image name: VPNHubAndSpoke
+Image name: MultiSite
 Image map: *Note for the 100ppi
 
 
@@ -1667,3 +1665,111 @@ conf t
   end
 wr
   
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+EVPN
+
+conf t
+ router bgp 20611
+  bgp log-neighbor-changes
+  no auto-summary
+  neighbor 172.16.8.2 remote-as 20611
+  neighbor 172.16.8.2 update-source lo1
+  neighbor 172.16.8.3 remote-as 20611
+  neighbor 172.16.8.3 update-source lo1
+  address-family l2vpn evpn
+   neighbor 172.16.8.2 activate
+   neighbor 172.16.8.3 activate
+   end
+
+
+
+@RR
+conf t
+ int lo0
+  ip add 172.16.8.100 255.255.255.255
+  exit
+ router ospf 1
+  router-id 172.16.8.100
+  network 172.16.8.100 0.0.0.0 area 1
+  exit
+ mpls ldp router-id lo0
+ do clear ip ospf process
+ yes
+
+!
+ router bgp 20611
+  bgp log-neighbor-changes
+  neighbor 172.16.8.1 remote-as 20611
+  neighbor 172.16.8.1 update-source lo0
+  neighbor 172.16.8.2 remote-as 20611
+  neighbor 172.16.8.2 update-source lo0
+  neighbor 172.16.8.3 remote-as 20611
+  neighbor 172.16.8.3 update-source lo0
+  address-family l2vpn evpn
+   neighbor 172.16.8.1 activate
+   neighbor 172.16.8.1 route-reflector-client
+   neighbor 172.16.8.1 send-community extended
+   neighbor 172.16.8.2 activate
+   neighbor 172.16.8.2 route-reflector-client
+   neighbor 172.16.8.2 send-community extended
+   neighbor 172.16.8.3 activate
+   neighbor 172.16.8.3 route-reflector-client
+   neighbor 172.16.8.3 send-community extended
+  end
+
+
+@PE-1
+conf t
+ router bgp 20611
+  bgp log-neighbor-changes
+  neighbor 172.16.8.100 remote-as 20611
+  neighbor 172.16.8.100 update-source lo10
+  address-family  l2vpn evpn
+   neighbor 172.16.8.100 activate
+   end
+
+
+@PE-2
+conf t
+ router bgp 20611
+  bgp log-neighbor-changes
+  neighbor 172.16.8.100 remote-as 20611
+  neighbor 172.16.8.100 update-source lo10
+  address-family  l2vpn evpn
+   neighbor 172.16.8.100 activate
+   end
+
+
+@PE-3
+conf t
+ router bgp 20611
+  bgp log-neighbor-changes
+  neighbor 172.16.8.100 remote-as 20611
+  neighbor 172.16.8.100 update-source lo10
+  address-family  l2vpn evpn
+   neighbor 172.16.8.100 activate
+   end
+
+
+@PE-1
+conf t
+ bridge-domain 20
+  member e0/2 service-instance 20
+  exit
+ int e0/2
+  no ip add
+  service instance 20 ethernet
+   encapsulation dot1q 10
+   
+   
+   
+AToM EoMPLS
