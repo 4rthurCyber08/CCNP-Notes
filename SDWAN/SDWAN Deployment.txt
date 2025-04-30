@@ -1,0 +1,14 @@
+SDWAN Deployment
+
+**********
+Configurations
+
+@IOS-CA
+conf t
+ hostname IOS-CA
+ crypto key generate rsa label PKI modulus 2048
+ ip http server
+ crypto pki server PKI
+ database url flash:
+ database level complete
+ issuer-name cn
