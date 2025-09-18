@@ -102,6 +102,7 @@ conf t
   neighbor 133.33.33.1 remote-as 3
   address-family ipv4
    neighbor 133.33.33.1 activate
+   network 3.3.3.3 mask 255.255.255.255
    network 133.33.33.0 mask 255.255.255.252
    end
  
@@ -112,6 +113,7 @@ conf t
   neighbor 111.11.11.1 remote-as 1
   address-family ipv4
    neighbor 111.11.11.1 activate
+   network 1.1.1.1 mask 255.255.255.255
    network 111.11.11.0 mask 255.255.255.0
    end
 
@@ -166,7 +168,7 @@ conf t
 conf t
  int e0/1
   ip nat inside
- int e0/0
+ int range lo3,e0/0
   ip nat outside
  access-list 1 permit any
  ip nat inside source list 1 int e0/0 overload
@@ -176,7 +178,7 @@ conf t
 conf t
  int e0/1
   ip nat inside
- int e0/0
+ int range lo1,e0/0
   ip nat outside
  access-list 1 permit any
  ip nat inside source list 1 int e0/0 overload
@@ -193,7 +195,7 @@ conf t
   tunnel destination 111.11.11.2
   tunnel mode gre ip
   bandwidth 10000
-  delay 1000
+  delay 100
   !mtu 1400
   end
 
@@ -205,7 +207,7 @@ conf t
   tunnel destination 133.33.33.2
   tunnel mode gre ip
   bandwidth 10000
-  delay 1000
+  delay 100
   !mtu 1400
   end
 
@@ -216,9 +218,9 @@ conf t
 
 !@R3
 conf t
- no access-list 101
- access-list 101 permit gre host 10.0.31.1 host 10.0.31.2
- access-list 101 permit gre 10.0.23.0 0.0.0.3 10.0.12.0 0.0.0.3
+ ip access-list extended GRE-IN-IPSEC
+  permit gre any any
+  exit
  !
  crypto isakmp policy 1
   authentication pre-share
@@ -227,29 +229,28 @@ conf t
   group 14
   exit
  !
- crypto isakmp key secretkey address 111.11.11.2
+ crypto isakmp key secretkey address 0.0.0.0 0.0.0.0
  !
- crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+ crypto ipsec transform-set GRE-SEC esp-aes esp-sha256-hmac
   mode transport
   exit
  !
  crypto map GREMAP 1 ipsec-isakmp
-  match address 101
+  match address GRE-IN-IPSEC
   set transform-set GRE-SEC
   set peer 111.11.11.2
   exit
  !
  int e0/0
-  crypto isakmp enable
   crypto map GREMAP
   end
 
 
 !@R1
 conf t
- no access-list 101
- access-list 101 permit gre host 10.0.31.2 host 10.0.31.1
- access-list 101 permit gre 10.0.12.0 0.0.0.3 10.0.23.0 0.0.0.3
+ ip access-list extended GRE-IN-IPSEC
+  permit gre any any
+  exit
  !
  crypto isakmp policy 1
   authentication pre-share
@@ -258,14 +259,14 @@ conf t
   group 14
   exit
  !
- crypto isakmp key secretkey address 133.33.33.2
+ crypto isakmp key secretkey address 0.0.0.0 0.0.0.0
  !
- crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+ crypto ipsec transform-set GRE-SEC esp-aes esp-sha256-hmac
   mode transport
   exit
  !
  crypto map GREMAP 1 ipsec-isakmp
-  match address 101
+  match address GRE-IN-IPSEC
   set transform-set GRE-SEC
   set peer 133.33.33.2
   exit
@@ -286,14 +287,20 @@ conf t
   group 14
   exit
  !
-  crypto isakmp key secretkey2 address 111.11.11.2
+  crypto isakmp key secretkey2 address 111.11.11.2 255.255.255.255
  !
-  crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  crypto ipsec transform-set GRE-SEC esp-aes esp-sha256-hmac
   mode transport
   exit
  !
+ ip access-list extended GRE-IN-IPSEC
+  permit gre any any
+  exit
+ !
  crypto ipsec profile GRE-PROFILE
+  match address GRE-IN-IPSEC
   set transform-set GRE-SEC
+  set peer 111.11.11.2
   exit
  !
  int tun1
@@ -309,14 +316,20 @@ conf t
   group 14
   exit
  !
-  crypto isakmp key secretkey2 address 133.33.33.2
+  crypto isakmp key secretkey2 address 133.33.33.2 255.255.255.255
  !
-  crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  crypto ipsec transform-set GRE-SEC esp-aes esp-sha256-hmac
   mode transport
+  exit
+ !
+ ip access-list extended GRE-IN-IPSEC
+  permit gre any any
   exit
  !
  crypto ipsec profile GRE-PROFILE
   set transform-set GRE-SEC
+  set transform-set GRE-SEC
+  set peer 133.33.33.2
   exit
  !
  int tun1
@@ -329,3 +342,17 @@ show crypto isakmp peers
 show crypto isakmp sa
 show crypto ipsec profile
 show crypto ipsec sa
+
+
+
+
+
+
+
+
+
+---
+
+!@R1
+conf t
+ 
