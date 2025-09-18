@@ -1,0 +1,331 @@
+Preconfig
+
+1. IP Address Assignment
+
+!@P2
+conf t
+ int e0/1
+  no shut
+  ip add 10.0.23.2 255.255.255.252
+  end
+
+!@S2
+conf t
+ int e0/1
+  ip add 10.0.12.2 255.255.255.252
+  no shut
+  end
+
+!@R3
+conf t
+ int lo3
+  ip add 3.3.3.3 255.255.255.255
+ int e0/1
+  no shut
+  ip add 10.0.23.1 255.255.255.252
+ int e0/0
+  ip add 133.33.33.2 255.255.255.252
+  no shut
+  end
+
+!@R1
+conf t
+ int lo1
+  ip add 1.1.1.1 255.255.255.255
+ int e0/1
+  ip add 10.0.12.1 255.255.255.252
+  no shut
+ int e0/0
+  ip add 111.11.11.2 255.255.255.0
+  no shut
+  end
+
+!@I3 - Globe
+conf t
+ int lo 0
+  ip add 33.33.33.33 255.255.255.255
+ int e1/1
+  no shut
+  ip add 35.3.5.3 255.255.255.0
+ int e0/0
+  no shut
+  ip add 133.33.33.1 255.255.255.252
+  end
+
+!@I1 - Converge
+conf t
+ int lo0
+  ip add 44.44.44.44 255.255.255.255
+ int e0/0
+  ip add 111.11.11.1 255.255.255.0
+  no shut
+ int e1/2
+  ip add 45.4.5.4 255.255.255.0
+  no shut
+  end
+
+!@I4 - Google
+conf t
+ int lo0
+  ip add 55.55.55.55 255.255.255.255
+ int lo8
+  ip add 8.8.8.8 255.255.255.255
+ int e0/1
+  ip add 45.4.5.5 255.255.255.0
+  no shut
+ int e0/3
+  ip add 35.3.5.5 255.255.255.0
+  no shut
+  end
+
+
+
+2. Default Routing
+
+!@P2
+conf t
+ ip route 0.0.0.0 0.0.0.0 10.0.23.1
+ end
+
+!@S2
+conf t
+ ip route 0.0.0.0 0.0.0.0 10.0.12.1
+ end
+
+
+3. BGP 
+
+!@R3
+conf t
+ router bgp 33
+  bgp log-neighbor-changes
+  neighbor 133.33.33.1 remote-as 3
+  address-family ipv4
+   neighbor 133.33.33.1 activate
+   network 133.33.33.0 mask 255.255.255.252
+   end
+ 
+!@R1
+conf t
+ router bgp 11
+  bgp log-neighbor-changes
+  neighbor 111.11.11.1 remote-as 1
+  address-family ipv4
+   neighbor 111.11.11.1 activate
+   network 111.11.11.0 mask 255.255.255.0
+   end
+
+!@I3 - Globe
+conf t
+ router bgp 3
+  bgp log-neighbor-changes
+  neighbor 133.33.33.2 remote-as 33
+  neighbor 35.3.5.5 remote-as 8
+  address-family ipv4
+   neighbor 133.33.33.2 activate
+   neighbor 35.3.5.5 activate
+   network 35.3.5.0 mask 255.255.255.0
+   network 33.33.33.33 mask 255.255.255.255
+   network 133.33.33.0 mask 255.255.255.252
+   end
+
+!@I1 - Converge
+conf t
+ router bgp 1
+  bgp log-neighbor-changes
+  neighbor 111.11.11.2 remote-as 11
+  neighbor 45.4.5.5 remote-as 8
+  address-family ipv4
+   neighbor 45.4.5.5 activate
+   neighbor 111.11.11.2 activate
+   network 44.44.44.44 mask 255.255.255.255
+   network 111.11.11.0 mask 255.255.255.0
+   network 45.4.5.0 mask 255.255.255.0
+   end
+
+!@I4 - Google
+conf t
+ router bgp 8
+  bgp log-neighbor-changes
+  neighbor 35.3.5.3 remote-as 3
+  neighbor 45.4.5.4 remote-as 1
+  address-family ipv4
+   neighbor 35.3.5.3 activate
+   neighbor 45.4.5.4 activate
+   network 55.55.55.55 mask 255.255.255.255
+   network 8.8.8.8 mask 255.255.255.255
+   network 35.3.5.0 mask 255.255.255.0
+   network 45.4.5.0 mask 255.255.255.0
+   network 45.4.5.0 mask 255.255.255.0
+   end
+
+
+4. NAT
+
+!@R3
+conf t
+ int e0/1
+  ip nat inside
+ int e0/0
+  ip nat outside
+ access-list 1 permit any
+ ip nat inside source list 1 int e0/0 overload
+ end
+
+!@R1
+conf t
+ int e0/1
+  ip nat inside
+ int e0/0
+  ip nat outside
+ access-list 1 permit any
+ ip nat inside source list 1 int e0/0 overload
+ end
+ 
+ 
+5. GRE Tunnel
+
+!@R3
+conf t
+ int tunnel 1
+  ip add 10.0.31.1 255.255.255.0
+  tunnel source e0/0
+  tunnel destination 111.11.11.2
+  tunnel mode gre ip
+  bandwidth 10000
+  delay 1000
+  !mtu 1400
+  end
+
+!@R1
+conf t
+ int tunnel 1
+  ip add 10.0.31.2 255.255.255.0
+  tunnel source e0/0
+  tunnel destination 133.33.33.2
+  tunnel mode gre ip
+  bandwidth 10000
+  delay 1000
+  !mtu 1400
+  end
+
+
+6. Site-to-Site GRE over IPSec Tunnel
+
+### Crypto Maps (Old Method)
+
+!@R3
+conf t
+ no access-list 101
+ access-list 101 permit gre host 10.0.31.1 host 10.0.31.2
+ access-list 101 permit gre 10.0.23.0 0.0.0.3 10.0.12.0 0.0.0.3
+ !
+ crypto isakmp policy 1
+  authentication pre-share
+  hash sha512
+  encryption aes 256
+  group 14
+  exit
+ !
+ crypto isakmp key secretkey address 111.11.11.2
+ !
+ crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  mode transport
+  exit
+ !
+ crypto map GREMAP 1 ipsec-isakmp
+  match address 101
+  set transform-set GRE-SEC
+  set peer 111.11.11.2
+  exit
+ !
+ int e0/0
+  crypto isakmp enable
+  crypto map GREMAP
+  end
+
+
+!@R1
+conf t
+ no access-list 101
+ access-list 101 permit gre host 10.0.31.2 host 10.0.31.1
+ access-list 101 permit gre 10.0.12.0 0.0.0.3 10.0.23.0 0.0.0.3
+ !
+ crypto isakmp policy 1
+  authentication pre-share
+  hash sha512
+  encryption aes 256
+  group 14
+  exit
+ !
+ crypto isakmp key secretkey address 133.33.33.2
+ !
+ crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  mode transport
+  exit
+ !
+ crypto map GREMAP 1 ipsec-isakmp
+  match address 101
+  set transform-set GRE-SEC
+  set peer 133.33.33.2
+  exit
+ !
+ int e0/0
+  crypto map GREMAP
+  end
+
+
+### IPSEC Profile
+
+!@R3
+conf t
+ crypto isakmp policy 2
+  authentication pre-share
+  hash sha512
+  encryption aes 256
+  group 14
+  exit
+ !
+  crypto isakmp key secretkey2 address 111.11.11.2
+ !
+  crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  mode transport
+  exit
+ !
+ crypto ipsec profile GRE-PROFILE
+  set transform-set GRE-SEC
+  exit
+ !
+ int tun1
+  tunnel protection ipsec profile GRE-PROFILE
+  end
+
+!@R1
+conf t
+ crypto isakmp policy 2
+  authentication pre-share
+  hash sha512
+  encryption aes 256
+  group 14
+  exit
+ !
+  crypto isakmp key secretkey2 address 133.33.33.2
+ !
+  crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  mode transport
+  exit
+ !
+ crypto ipsec profile GRE-PROFILE
+  set transform-set GRE-SEC
+  exit
+ !
+ int tun1
+  tunnel protection ipsec profile GRE-PROFILE
+  end
+
+
+!@R1,R3
+show crypto isakmp peers
+show crypto isakmp sa
+show crypto ipsec profile
+show crypto ipsec sa
