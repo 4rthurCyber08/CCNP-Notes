@@ -248,6 +248,7 @@ conf t
  crypto isakmp key secretkey address 111.11.11.2
  !
  crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  mode transport
   exit
  !
  crypto map GREMAP 1 ipsec-isakmp
@@ -280,6 +281,7 @@ conf t
  crypto isakmp key secretkey address 133.33.33.2
  !
  crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
+  mode transport
   exit
  !
  crypto map GREMAP 1 ipsec-isakmp
@@ -299,6 +301,13 @@ Verify:
 !@R1,R3
 show crypto isakmp sa
 
+
+
+
+
+
+
+
 ### IPSEC Profile
 
 !@R3
@@ -316,14 +325,9 @@ conf t
   mode transport
   exit
  !
- ip access-list extended GRE-IN-IPSEC
-  permit gre any any
-  exit
- !
  crypto ipsec profile GRE-PROFILE
-  match address GRE-IN-IPSEC
   set transform-set GRE-SEC
-  set peer 111.11.11.2
+  set pfs group2
   exit
  !
  int tun1
@@ -345,14 +349,10 @@ conf t
   mode transport
   exit
  !
- ip access-list extended GRE-IN-IPSEC
-  permit gre any any
-  exit
  !
  crypto ipsec profile GRE-PROFILE
   set transform-set GRE-SEC
-  set transform-set GRE-SEC
-  set peer 133.33.33.2
+  set pfs group2
   exit
  !
  int tun1
