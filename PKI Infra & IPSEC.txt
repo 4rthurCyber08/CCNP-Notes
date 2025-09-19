@@ -1,0 +1,139 @@
+NTP Config
+
+!@R3
+conf t
+ ntp master
+ ntp source lo3
+ end
+ 
+!@R1
+conf t
+ ntp server 3.3.3.3
+ end
+
+!@R4
+conf t
+ ntp server 3.3.3.3
+ end
+
+
+
+PKI Infra
+
+1. Generate Key Pair
+
+!@R3
+conf t
+ crypto key generate rsa general-keys label rivankeys modulus 2048 exportable
+ crypto key export rsa rivankeys pem url unix: 3des C1sc0123
+ end
+
+2. Setup PKI Server
+
+!@R3
+conf t
+ ip http server
+ crypto pki server rivanserver
+  database url unix: 
+  database level complete
+  issuer-name cn=rivanserver.com
+  lifetime certificate 365
+  grant auto
+  hash sha256
+  database archive pkcs12 password C1sc0123
+  no shut
+  end
+show crypto pki server
+
+
+3. Certificate Enrollment & Trustpoint
+
+!@R4 & R2
+conf t
+ crypto pki trustpoint rivantrust
+  enrollment url http://3.3.3.3
+  exit
+ crypto pki authenticate rivantrust
+ yes
+ !crypto pki enroll rivantrust   <- Generate Password from PKI Server
+ ! paste password
+ ! no
+ ! no
+ ! yes
+
+!@R3
+crypto pki server rivanserver password generate 
+!
+! apply password for clients
+
+
+
+
+4. GRE Tunnel
+
+!@R4
+conf t
+ int tun1
+  ip add 172.16.0.1 255.255.255.0
+  tunnel source e1/2
+  tunnel destination 10.1.1.5
+  tunnel mode gre ip
+  bandwidth 10000
+  delay 100
+  no shut
+  end
+
+!@R2
+conf t
+ int tun1
+  ip add 172.16.0.2 255.255.255.0
+  tunnel source e1/1
+  tunnel destination 10.1.1.10
+  tunnel mode gre ip
+  bandwidth 10000
+  delay 100
+  no shut
+  end
+
+
+5. Add Routing to GRE Tunnel for Interesting Traffic
+
+!@R4
+conf t
+ ip route 10.1.1.0 255.255.255.252 172.16.0.2
+ end
+
+!@R2
+conf t
+ ip route 10.1.4.4 255.255.255.252 172.16.0.1
+ end
+ 
+  
+  
+6. IP Sec Profile
+
+!@R4 & R2
+conf t
+ crypto isakmp policy 1
+  authentication rsa-sig
+  encryption aes 256
+  hash sha256
+  group 14
+  exit
+ !
+ crypto ipsec transform-set TUNNEL esp-aes 256 esp-sha-hmac
+  mode transport
+  exit
+ !
+ crypto ipsec profile RIVANPROFILE 
+  set transform-set TUNNEL
+  set pfs group2
+  end
+
+6. Apply IPSec Profile Protection to Tunnel
+
+!@R4 & R2
+conf t
+ int tunnel 1
+  tunnel protection ipsec profile RIVANPROFILE 
+  end
