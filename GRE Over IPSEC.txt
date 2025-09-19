@@ -212,6 +212,20 @@ conf t
   end
 
 
+6. Tunnel Routing
+
+!@R3
+conf t
+ ip route 10.0.12.0 255.255.255.252 10.0.31.2
+ end
+
+!@R1
+conf t
+ ip route 10.0.23.0 255.255.255.252 10.0.31.1
+ end
+
+ 
+
 6. Site-to-Site GRE over IPSec Tunnel
 
 ### Crypto Maps (Old Method)
@@ -219,26 +233,28 @@ conf t
 !@R3
 conf t
  ip access-list extended GRE-IN-IPSEC
-  permit gre any any
+  permit gre host 133.33.33.2 host 111.11.11.2
   exit
+ !
+ crypto isakmp enable
  !
  crypto isakmp policy 1
   authentication pre-share
-  hash sha512
   encryption aes 256
+  hash sha512
   group 14
   exit
  !
- crypto isakmp key secretkey address 0.0.0.0 0.0.0.0
+ crypto isakmp key secretkey address 111.11.11.2
  !
- crypto ipsec transform-set GRE-SEC esp-aes esp-sha256-hmac
-  mode transport
+ crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
   exit
  !
  crypto map GREMAP 1 ipsec-isakmp
   match address GRE-IN-IPSEC
   set transform-set GRE-SEC
   set peer 111.11.11.2
+  set pfs group2
   exit
  !
  int e0/0
@@ -249,32 +265,39 @@ conf t
 !@R1
 conf t
  ip access-list extended GRE-IN-IPSEC
-  permit gre any any
+  permit gre host 111.11.11.2 host 133.33.33.2 
   exit
+ !
+ crypto isakmp enable
  !
  crypto isakmp policy 1
   authentication pre-share
-  hash sha512
   encryption aes 256
+  hash sha512
   group 14
   exit
  !
- crypto isakmp key secretkey address 0.0.0.0 0.0.0.0
+ crypto isakmp key secretkey address 133.33.33.2
  !
- crypto ipsec transform-set GRE-SEC esp-aes esp-sha256-hmac
-  mode transport
+ crypto ipsec transform-set GRE-SEC esp-aes 256 esp-sha256-hmac
   exit
  !
  crypto map GREMAP 1 ipsec-isakmp
   match address GRE-IN-IPSEC
   set transform-set GRE-SEC
   set peer 133.33.33.2
+  set pfs group2
   exit
  !
  int e0/0
   crypto map GREMAP
   end
 
+
+Verify:
+
+!@R1,R3
+show crypto isakmp sa
 
 ### IPSEC Profile
 
