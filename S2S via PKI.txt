@@ -84,7 +84,7 @@ Deploy 2 YVM-v6
 _____________________
 ********************* CONFIGURE DEVICES
 
-@VPN-PH
+!@VPN-PH
 conf t
  hostname VPN-PH
  enable secret pass
@@ -114,7 +114,7 @@ conf t
 wr
 
 
-@VPN-JP
+!@VPN-JP
 conf t
  hostname VPN-JP
  enable secret pass
@@ -144,20 +144,27 @@ conf t
 wr
 
 
-@BLDG-PH
+!@BLDG-PH
 sudo su
-ifconfig eth0 10.10.10.45 netmask 255.255.255.224 up
+ifconfig eth0 10.10.10.41 netmask 255.255.255.224 up
 route add default gw 10.10.10.40
 ping 10.10.10.40
 
-@BLDG-JP
+
+!@BLDG-JP
 sudo su
-ifconfig eth0 20.20.20.55 netmask 255.255.255.248 up
+ifconfig eth0 20.20.20.51 netmask 255.255.255.248 up
 route add default gw 20.20.20.50
 ping 20.20.20.50
 
 
-
+_____________________
+********************* CREATE USER ACCOUNTS ON BLDGs
+!@BLDG-PH, BLDG-JP
+sudo  su
+adduser admin
+> pass
+> pass
 
 
 _____________________
@@ -176,7 +183,9 @@ NetOps VM
 1. Configure IP addressing for NetAdapter 2 (Verify MAC ADDRESS of interface)
 
 !@NetOps
-ifconfig ens224 192.168.102.100 netmask 255.255.255.0 up
+ifconfig ens192 192.168.102.100 netmask 255.255.255.0 up
+ifconfig ens224 192.168.103.100 netmask 255.255.255.0 up
+
 
 
 2. Create a directory for keys and certificates.
@@ -185,6 +194,9 @@ ifconfig ens224 192.168.102.100 netmask 255.255.255.0 up
 cd
 mkdir keystore
 cd keystore
+mkdir rivankeys
+cd rivankeys
+
 
 3. Create a Private key with a Selfsigned Certificate (x509)
 
@@ -195,11 +207,11 @@ openssl req -x509 -newkey rsa:2048 -days 365 -keyout key-rivan.pem -out ca-rivan
 Sample Output:
 -----
 Country Name (2 letter code) [XX]:PH
-State or Province Name (full name) []:NCR
+State or Province Name (full name) []:National Capital Region
 Locality Name (eg, city) [Default City]:Makati
 Organization Name (eg, company) [Default Company Ltd]:Rivancorp
-Organizational Unit Name (eg, section) []:HQ
-Common Name (eg, your name or your server's hostname) []:rivan.com
+Organizational Unit Name (eg, section) []:Head Quarters
+Common Name (eg, your name or your server's hostname) []: Rivan Corporation Cybersecurity Institute
 Email Address []:admin@rivancorp.com
 
 
@@ -235,7 +247,7 @@ conf t
   subject-name CN=siteph.rivan.com, C=PH, ST=NCR, L=Makati, O=Rivancorp, OU=SitePH, E=siteph@rivancorp.com
   subject-alt-name siteph.rivan.com
   subject-alt-name ph.rivan.com
-  storage unix: 
+  storage nvram: 
   primary
   revocation-check none
   rsakeypair rivankeys
@@ -252,7 +264,7 @@ conf t
   subject-name CN=siteph.rivan.com, C=JP, ST=Kanto, L=Tokyo, O=Rivancorp, OU=SiteJP, E=sitejp@rivancorp.com
   subject-alt-name sitejp.rivan.com
   subject-alt-name jp.rivan.com
-  storage unix: 
+  storage nvram: 
   primary
   revocation-check none
   rsakeypair rivankeys
@@ -295,8 +307,8 @@ openssl x509 -req -in req-ph.pem -CA ca-rivan.pem -CAkey key-rivan.pem -out sign
 openssl x509 -req -in req-jp.pem -CA ca-rivan.pem -CAkey key-rivan.pem -out signed-jp.pem
 
 include subject names:
--subj "/C=PH/ST=NCR/L=Makati/O=Rivancorp/OU=SitePH/CN=siteph.rivan.com/emailAddress=siteph@rivancorp.com/subjectAltName=DNS:siteph.rivan.com,DNS:ph.rivan.com,IP:208.8.8.11"
--subj "/C=JP/ST=Kanto/L=Tokyo/O=Rivancorp/OU=SiteJP/CN=sitejp.rivan.com/emailAddress=sitejp@rivancorp.com/subjectAltName=DNS:sitejp.rivan.com,DNS:jp.rivan.com,IP:208.8.8.12"
+-subj "/C=PH/ST=NCR/L=Makati/O=Rivancorp/OU=SitePH/CN=Rivan Corporation PH/emailAddress=siteph@rivancorp.com/subjectAltName=DNS:siteph.rivan.com,DNS:ph.rivan.com,IP:208.8.8.11"
+-subj "/C=JP/ST=Kanto/L=Tokyo/O=Rivancorp/OU=SiteJP/CN=Rivan Corporation PH/emailAddress=sitejp@rivancorp.com/subjectAltName=DNS:sitejp.rivan.com,DNS:jp.rivan.com,IP:208.8.8.12"
  
 !@NetOps - obtain the signed CSRs
 cat signed-rivansitea.pem
@@ -311,6 +323,10 @@ conf t
 
 > Paste the signed CSR
 
+7. Verify existing certificates.
+
+!@VPN-PH, VPN-JP
+show crypto pki certificates
 
 _____________________
 ********************* Configure GRE over IPSec via Certificate Authentication
@@ -326,7 +342,7 @@ conf t
   tunnel mode gre ip
   end
 
-!@VPN-PH
+!@VPN-JP
 conf t
  int tun1
   ip add 172.16.10.2 255.255.255.0
