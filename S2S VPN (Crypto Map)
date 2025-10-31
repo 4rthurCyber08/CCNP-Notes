@@ -1,3 +1,6 @@
+NOTE: Differentiate Crypto Maps vs GRE over IPSec: 
+Crypto Maps cannot be applied to tunnel interfaces
+
 Steps to configure S2S VPN (Crypto Map)
 
 1. Set a ISAKMP Policy (Phase 1)
