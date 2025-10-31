@@ -1,0 +1,58 @@
+NOTE: Differentiate Crypto Maps vs GRE over IPSec: 
+IPSEC Profiles can be applied to interfaces
+
+Steps to configure S2S VPN (GRE Over IPSec)
+
+1. Set a ISAKMP Policy (Phase 1)
+
+conf t
+ crypto isakmp policy 1
+  authentication pre-share
+  encryption aes 256
+  hash sha512
+  group 14
+  lifetime 86400
+  exit
+ crypto isakmp key VPN-Bkey address __.__.__.__
+  end
+
+
+2. Set a IPSec Transform-set (Phase 2)
+
+conf t
+ crypto ipsec transform-set IPSEC_SET esp-aes esp-sha512-hmac
+  mode transport
+  exit
+
+
+3. Set an IPSec Profile
+
+conf t
+ crypto ipsec profile VPN-PROFILE
+  set transform-set IPSEC-SET
+  set pfs group14
+  end
+
+
+4. Create a GRE Tunnel
+
+conf t
+ int tun1
+  ip add 172.16.1.1 255.255.255.0
+  tunnel source e0/0
+  tunnel destination __.__.__.__
+  tunnel mode gre ip
+  end
+
+5. Apply IPSec to tunnel
+
+conf t
+ int tun1
+  tunnel protection ipsec profile VPN-PROFILE
+  end
+
+6. Define Interesting Traffic
+
+conf t
+ ip route __.__.__.__  __.__.__.__  172.16.1.2
+ end
